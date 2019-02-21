@@ -60,6 +60,12 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
         return UIEdgeInsets(top: 0, left: 10.0, bottom: 0, right: 10.0)
     }
     
+    func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        let photoReference = photoReferences[indexPath.item]
+        guard let operation = fetchOperations[photoReference.id] else { return }
+        operation.cancel()
+    }
+    
     // MARK: - Private
     
     private func loadImage(forCell cell: ImageCollectionViewCell, forItemAt indexPath: IndexPath) {
@@ -83,6 +89,9 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
         }
         
         let setCellImageOp = BlockOperation {
+            // Store fetch operation just once and set it everytime to the newest value
+            defer { self.fetchOperations.removeValue(forKey: photoReference.id) }
+            
             guard indexPath == self.collectionView.indexPath(for: cell),
                 let data = fetchImageOp.imageData,
                 let image = UIImage(data: data) else { return }

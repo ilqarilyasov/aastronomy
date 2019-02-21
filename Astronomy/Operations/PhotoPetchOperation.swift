@@ -20,11 +20,13 @@ class PhotoFetchOperation: ConcurrentOperation {
     }
     
     override func start() {
+        super.start()
         state = .isExecuting
         guard let url = marsPhotoReference.imageURL.usingHTTPS else { return }
         
         let dataTask = URLSession.shared.dataTask(with: url) { (data, _, error) in
             defer { self.state = .isFinished }
+            if self.isCancelled { return }
             
             if let error = error {
                 NSLog("Error performing data task for PhotoFetchOperation: \(error)")
