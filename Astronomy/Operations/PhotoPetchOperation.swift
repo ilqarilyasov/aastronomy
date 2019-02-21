@@ -10,8 +10,8 @@ import Foundation
 
 class PhotoFetchOperation: ConcurrentOperation {
     
-    private var marsPhotoReference: MarsPhotoReference
-    private var imageData: Data?
+    private let marsPhotoReference: MarsPhotoReference
+    var imageData: Data?
     private var task: URLSessionDataTask?
     
     init(marsRoverReference: MarsPhotoReference) {
@@ -20,13 +20,12 @@ class PhotoFetchOperation: ConcurrentOperation {
     }
     
     override func start() {
-        super.start()
         state = .isExecuting
-        defer { self.state = .isFinished }
-        
         guard let url = marsPhotoReference.imageURL.usingHTTPS else { return }
         
-        task = URLSession.shared.dataTask(with: url) { (data, _, error) in
+        let dataTask = URLSession.shared.dataTask(with: url) { (data, _, error) in
+            defer { self.state = .isFinished }
+            
             if let error = error {
                 NSLog("Error performing data task for PhotoFetchOperation: \(error)")
                 return
@@ -39,6 +38,8 @@ class PhotoFetchOperation: ConcurrentOperation {
             
             self.imageData = data
         }
+        dataTask.resume()
+        task = dataTask
     }
     
     override func cancel() {

@@ -67,36 +67,37 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
         let photoReference = photoReferences[indexPath.item]
         
         // TODO: Implement image loading here
-        guard let url = photoReference.imageURL.usingHTTPS else { return }
         
-        if let data = cache.value(forKey: photoReference.id) {
-            let image = UIImage(data: data)
+        if let data = cache.value(forKey: photoReference.id),
+            let image = UIImage(data: data) {
             cell.imageView.image = image
             return
         }
         
-        URLSession.shared.dataTask(with: url) { (data, _, error) in
-            if let error = error {
-                NSLog("Error performing loadImage data task: \(error)")
-                return
-            }
-            
-            guard let data = data else {
-                NSLog("No data returned from loadImage data task")
-                return
-            }
-            
-            self.cache.cache(value: data, forKey: photoReference.id)
-            let image = UIImage(data: data)
-            
-            DispatchQueue.main.async {
-                if self.collectionView.indexPath(for: cell) == indexPath {
-                    cell.imageView.image = image
-                }
-            }
-            
-        }.resume()
+        let fetchImageOp = PhotoFetchOperation(marsRoverReference: photoReference)
         
+        let cacheOp = BlockOperation {
+            if let data = fetchImageOp.imageData {
+                self.cache.cache(value: data, forKey: photoReference.id)
+            }
+        }
+        
+        let setCellImageOp = BlockOperation {
+            guard indexPath == self.collectionView.indexPath(for: cell),
+                let data = fetchImageOp.imageData,
+                let image = UIImage(data: data) else { return }
+            
+            cell.imageView.image = image
+        }
+        
+        cacheOp.addDependency(fetchImageOp)
+        setCellImageOp.addDependency(fetchImageOp)
+        
+        photoFetchQueue.addOperation(fetchImageOp)
+        photoFetchQueue.addOperation(cacheOp)
+        OperationQueue.main.addOperation(setCellImageOp)
+        
+        fetchOperations[photoReference.id] = fetchImageOp
     }
     
     // Properties
@@ -127,6 +128,8 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
     }
     
     private let cache = Cache<Int, Data>()
+    private let photoFetchQueue = OperationQueue()
+    private var fetchOperations = [Int: Operation]()
     
     @IBOutlet var collectionView: UICollectionView!
 }
