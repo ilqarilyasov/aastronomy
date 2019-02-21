@@ -69,6 +69,12 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
         // TODO: Implement image loading here
         guard let url = photoReference.imageURL.usingHTTPS else { return }
         
+        if let data = cache.value(forKey: photoReference.id) {
+            let image = UIImage(data: data)
+            cell.imageView.image = image
+            return
+        }
+        
         URLSession.shared.dataTask(with: url) { (data, _, error) in
             if let error = error {
                 NSLog("Error performing loadImage data task: \(error)")
@@ -80,6 +86,7 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
                 return
             }
             
+            self.cache.cache(value: data, forKey: photoReference.id)
             let image = UIImage(data: data)
             
             DispatchQueue.main.async {
@@ -87,6 +94,7 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
                     cell.imageView.image = image
                 }
             }
+            
         }.resume()
         
     }
@@ -117,6 +125,8 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
             DispatchQueue.main.async { self.collectionView?.reloadData() }
         }
     }
+    
+    private let cache = Cache<Int, Data>()
     
     @IBOutlet var collectionView: UICollectionView!
 }
