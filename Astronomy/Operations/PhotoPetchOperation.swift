@@ -25,10 +25,10 @@ class PhotoFetchOperation: ConcurrentOperation {
         
         let urlCache = URLCache(memoryCapacity: Int(100e6), diskCapacity: Int(1e9), diskPath: nil) // Provide a disk path
         //        URLCache.shared = urlCache
-        let conf = URLSession.shared.configuration
-        conf.urlCache = urlCache
+        let session = URLSession.shared
+        session.configuration.urlCache = urlCache
         
-        dataTask = URLSession.shared.dataTask(with: url) { (data, _, error) in
+        dataTask = session.dataTask(with: url) { (data, _, error) in
             defer { self.state = .isFinished }
             if self.isCancelled { return }
             
