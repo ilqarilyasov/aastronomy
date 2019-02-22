@@ -11,8 +11,8 @@ import Foundation
 class PhotoFetchOperation: ConcurrentOperation {
     
     private let marsPhotoReference: MarsPhotoReference
+    private var dataTask: URLSessionDataTask?
     var imageData: Data?
-    private var task: URLSessionDataTask?
     
     init(marsRoverReference: MarsPhotoReference) {
         self.marsPhotoReference = marsRoverReference
@@ -20,11 +20,15 @@ class PhotoFetchOperation: ConcurrentOperation {
     }
     
     override func start() {
-        super.start()
         state = .isExecuting
         guard let url = marsPhotoReference.imageURL.usingHTTPS else { return }
         
-        let dataTask = URLSession.shared.dataTask(with: url) { (data, _, error) in
+        let urlCache = URLCache(memoryCapacity: Int(100e6), diskCapacity: Int(1e9), diskPath: nil) // Provide a disk path
+        //        URLCache.shared = urlCache
+        let conf = URLSession.shared.configuration
+        conf.urlCache = urlCache
+        
+        dataTask = URLSession.shared.dataTask(with: url) { (data, _, error) in
             defer { self.state = .isFinished }
             if self.isCancelled { return }
             
@@ -40,13 +44,13 @@ class PhotoFetchOperation: ConcurrentOperation {
             
             self.imageData = data
         }
-        dataTask.resume()
-        task = dataTask
+        
+        dataTask?.resume()
     }
     
     override func cancel() {
         super.cancel()
-        task?.cancel()
+        dataTask?.cancel()
     }
     
 }

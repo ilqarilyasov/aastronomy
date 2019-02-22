@@ -62,8 +62,7 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
     
     func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
         let photoReference = photoReferences[indexPath.item]
-        guard let operation = fetchOperations[photoReference.id] else { return }
-        operation.cancel()
+        fetchOperations[photoReference.id]?.cancel()
     }
     
     // MARK: - Private
@@ -92,11 +91,22 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
             // Store fetch operation just once and set it everytime to the newest value
             defer { self.fetchOperations.removeValue(forKey: photoReference.id) }
             
-            guard indexPath == self.collectionView.indexPath(for: cell),
-                let data = fetchImageOp.imageData,
-                let image = UIImage(data: data) else { return }
+            if let currentIndexPath = self.collectionView?.indexPath(for: cell),
+                currentIndexPath != indexPath {
+                print("Got image for now-reused cell")
+                return // Cell has been reused
+            }
+
+            if let data = fetchImageOp.imageData {
+                cell.imageView.image = UIImage(data: data)
+            }
             
-            cell.imageView.image = image
+//            guard let currentIndexPath = self.collectionView.indexPath(for: cell),
+//                indexPath == currentIndexPath,
+//                let data = fetchImageOp.imageData,
+//                let image = UIImage(data: data) else { return }
+//
+//            cell.imageView.image = image
         }
         
         cacheOp.addDependency(fetchImageOp)
@@ -115,7 +125,7 @@ class PhotosCollectionViewController: UIViewController, UICollectionViewDataSour
     
     private var roverInfo: MarsRover? {
         didSet {
-            solDescription = roverInfo?.solDescriptions[3]
+            solDescription = roverInfo?.solDescriptions[10]
         }
     }
     private var solDescription: SolDescription? {

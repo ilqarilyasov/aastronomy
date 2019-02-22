@@ -15,6 +15,9 @@ class Cache<Key: Hashable, Value> {
     
     func cache(value: Value, forKey: Key) {
         queue.async {
+//            if self.cachedItems.count > 50 {
+//                self.cachedItems.removeOldest()
+//            }
             self.cachedItems[forKey] = value
         }
     }
@@ -22,6 +25,18 @@ class Cache<Key: Hashable, Value> {
     func value(forKey: Key) -> Value? {
         return queue.sync {
             cachedItems[forKey]
+        }
+    }
+    
+    func removeValue(forKey: Key) {
+        queue.async {
+            self.cachedItems.removeValue(forKey: forKey)
+        }
+    }
+    
+    func clear() {
+        queue.async {
+            self.cachedItems.removeAll()
         }
     }
 }
